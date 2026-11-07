@@ -1,0 +1,21 @@
+import { test, expect } from '@playwright/test';
+test('renders the world, starts flight and pauses', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await expect(page.locator('#app')).toHaveAttribute('data-ready', 'true');
+  await expect(page.getByLabel('SKYHOP 3D world')).toBeVisible();
+  await page.getByRole('button', { name: "Let's fly" }).click();
+  await expect(page.locator('.hud')).toBeVisible();
+  await expect(page.locator('[data-speed]')).toHaveText(/\d+/);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('status')).toContainText('Paused');
+  const altitude = await page.locator('[data-altitude]').textContent();
+  await page.waitForTimeout(200);
+  await expect(page.locator('[data-altitude]')).toHaveText(altitude!);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('status')).toBeEmpty();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByLabel('SKYHOP 3D world')).toBeVisible();
+  expect(errors).toEqual([]);
+});
