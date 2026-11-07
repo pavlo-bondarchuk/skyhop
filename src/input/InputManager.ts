@@ -6,19 +6,20 @@ export class InputManager {
     this.keys.add(event.code);
   };
   private up = (event: KeyboardEvent) => { this.keys.delete(event.code); };
-  private clear = () => { this.keys.clear(); };
+  private onBlur = () => { this.keys.clear(); };
   constructor() {
     window.addEventListener('keydown', this.down);
     window.addEventListener('keyup', this.up);
-    window.addEventListener('blur', this.clear);
+    window.addEventListener('blur', this.onBlur);
   }
+  clear() { this.keys.clear(); }
   read(): FlightInput {
     const pressed = (...codes: string[]) => Number(codes.some(code => this.keys.has(code)));
-    return { pitch: pressed('KeyW', 'ArrowUp') - pressed('KeyS', 'ArrowDown'), roll: pressed('KeyA', 'ArrowLeft') - pressed('KeyD', 'ArrowRight'), throttle: pressed('ShiftLeft', 'ShiftRight') - pressed('ControlLeft', 'ControlRight') };
+    return { pitch: pressed('KeyW', 'ArrowUp') - pressed('KeyS', 'ArrowDown'), roll: pressed('KeyD', 'ArrowRight') - pressed('KeyA', 'ArrowLeft'), throttle: pressed('ShiftLeft', 'ShiftRight') - pressed('ControlLeft', 'ControlRight') };
   }
   dispose() {
     window.removeEventListener('keydown', this.down);
     window.removeEventListener('keyup', this.up);
-    window.removeEventListener('blur', this.clear);
+    window.removeEventListener('blur', this.onBlur);
   }
 }

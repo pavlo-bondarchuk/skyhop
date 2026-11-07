@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FlightPhysics } from './FlightPhysics';
-import { scout } from '../config/aircraft';
+import { aircraft } from '../config/aircraft';
+const scout = aircraft[0]!;
 import { Vector3 } from 'three';
 const neutral = { pitch: 0, roll: 0, throttle: 0 };
 describe('FlightPhysics', () => {

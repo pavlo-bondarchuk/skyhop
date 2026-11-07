@@ -1,6 +1,3 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { GameState } from './GameState';
-it('starts in the menu and toggles pause only in flight', () => {
-  const state = new GameState(); state.togglePause(); expect(state.mode).toBe('menu');
-  state.start(); expect(state.mode).toBe('flying'); state.togglePause(); expect(state.mode).toBe('paused'); state.togglePause(); expect(state.mode).toBe('flying');
-});
+describe('GameState',()=>{it('allows only valid selection, flight, pause and return transitions',()=>{const s=new GameState();expect(s.beginTakeoff()).toBe(false);expect(s.beginStart()).toBe(true);expect(s.beginStart()).toBe(false);expect(s.beginTakeoff()).toBe(true);expect(s.pause()).toBe(true);expect(s.resume()).toBe(true);expect(s.beginFlight()).toBe(true);expect(s.pause()).toBe(true);expect(s.beginReturn()).toBe(true);expect(s.finishReturn()).toBe(true);expect(s.mode).toBe('selection');expect(s.beginStart()).toBe(true)})});

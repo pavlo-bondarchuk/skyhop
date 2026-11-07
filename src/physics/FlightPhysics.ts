@@ -25,5 +25,6 @@ export class FlightPhysics {
     this.orientation.premultiply(new Quaternion().setFromUnitVectors(previousUp, nextUp)).normalize();
     if (this.position.length() < this.radius + 2) this.position.setLength(this.radius + 2);
   }
+  reset() { this.position.set(0, this.radius + 2, 0); this.orientation.identity(); this.speed = this.config.cruiseSpeed; this.throttle = 0.65; }
   get altitude() { return this.position.length() - this.radius; }
 }

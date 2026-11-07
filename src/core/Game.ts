@@ -1,9 +1,8 @@
-import { AmbientLight, Color, DirectionalLight, FogExp2, Scene, WebGLRenderer, Mesh, type Object3D } from 'three';
-import { Aircraft } from '../aircraft/Aircraft';
-import { AircraftLoader } from '../aircraft/AircraftLoader';
+import { AmbientLight, Color, DirectionalLight, FogExp2, Mesh, Scene, Vector3, WebGLRenderer } from 'three';
+import { AircraftLoader, type AircraftInstance } from '../aircraft/AircraftLoader';
 import { FlightController } from '../aircraft/FlightController';
 import { FollowCamera } from '../camera/FollowCamera';
-import { planetRadius, scout } from '../config/aircraft';
+import { aircraft, planetRadius } from '../config/aircraft';
 import { InputManager } from '../input/InputManager';
 import { FlightPhysics } from '../physics/FlightPhysics';
 import { FlightHUD } from '../ui/FlightHUD';
@@ -15,49 +14,21 @@ import { Terrain } from '../world/Terrain';
 import { GameLoop } from './GameLoop';
 import { GameState } from './GameState';
 export class Game {
-  private scene = new Scene();
-  private renderer = new WebGLRenderer({ antialias: true });
-  private camera = new FollowCamera();
-  private input = new InputManager();
-  private state = new GameState();
-  private physics = new FlightPhysics(scout, planetRadius);
-  private controller: FlightController;
-  private hud = new FlightHUD();
-  private loop = new GameLoop(dt => this.update(dt));
-  private resize = () => { this.camera.resize(); this.renderer.setSize(window.innerWidth, window.innerHeight); };
-  private keydown = (event: KeyboardEvent) => { if (event.code === 'Escape') this.state.togglePause(); };
-  constructor(private root: HTMLElement) {
-    this.scene.background = new Color('#b9d9d7'); this.scene.fog = new FogExp2('#b9d9d7', 0.0014);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.domElement.setAttribute('aria-label', 'SKYHOP 3D world');
-    this.root.append(this.renderer.domElement);
-    this.scene.add(new AmbientLight('#fff5dc', 2));
-    const sun = new DirectionalLight('#fff0d3', 3); sun.position.set(-60, 150, 70); this.scene.add(sun);
-    this.scene.add(new Planet(planetRadius), new Terrain(planetRadius), new Clouds(planetRadius), new Airport(planetRadius));
-    const aircraft = new Aircraft(); this.scene.add(aircraft);
-    this.controller = new FlightController(this.physics, aircraft);
-    if (scout.modelPath) void this.replaceModel(aircraft, scout.modelPath);
-    const menu = new MainMenu(() => { this.state.start(); menu.hide(); this.hud.element.hidden = false; });
-    this.root.append(menu.element, this.hud.element);
-    this.camera.follow(this.physics, 0, true); this.resize();
-    window.addEventListener('resize', this.resize); window.addEventListener('keydown', this.keydown);
-    this.loop.start(); this.root.dataset.ready = 'true';
-  }
-  private async replaceModel(fallback: Object3D, path: string) {
-    try {
-      const model = await new AircraftLoader().load(path);
-      if (!this.renderer.domElement.isConnected) return;
-      this.scene.remove(fallback); this.scene.add(model); this.controller = new FlightController(this.physics, model);
-    } catch (error) { console.warn('Local aircraft model unavailable; using procedural aircraft.', error); }
-  }
-  private update(dt: number) {
-    if (this.state.mode === 'flying') this.controller.update(dt, this.input.read());
-    this.camera.follow(this.physics, dt); this.hud.update(this.physics, this.state.mode === 'paused');
-    this.renderer.render(this.scene, this.camera);
-  }
-  dispose() {
-    this.loop.stop(); this.input.dispose(); window.removeEventListener('resize', this.resize); window.removeEventListener('keydown', this.keydown);
-    this.scene.traverse(object => { if (object instanceof Mesh) { object.geometry.dispose(); const materials = Array.isArray(object.material) ? object.material : [object.material]; materials.forEach(material => material.dispose()); } });
-    this.renderer.dispose(); this.root.replaceChildren();
-  }
+ private scene=new Scene(); private renderer=new WebGLRenderer({antialias:true}); private camera=new FollowCamera(); private input=new InputManager(); private state=new GameState(); private configIndex=0; private physics=new FlightPhysics(aircraft[0]!,planetRadius); private instance:AircraftInstance|null=null; private controller:FlightController|null=null; private loader=new AircraftLoader(); private hud:FlightHUD; private menu:MainMenu; private transition=0; private selectionX=0; private cameraBlend=0; private takeoffTime=0; private returning=0;  private busySelection=false;
+ private resize=()=>{this.camera.resize();this.renderer.setSize(innerWidth,innerHeight)};
+ private keydown=(e:KeyboardEvent)=>{if(e.code==='Escape'){if(this.state.mode==='paused')this.resume();else if(this.state.mode==='flying'||this.state.mode==='takeoff')this.pause();}};
+ constructor(private root:HTMLElement){this.scene.background=new Color('#b9d9d7');this.scene.fog=new FogExp2('#b9d9d7',.0014);this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.domElement.setAttribute('aria-label','SKYHOP 3D world');this.root.append(this.renderer.domElement);this.scene.add(new AmbientLight('#fff5dc',2));const sun=new DirectionalLight('#fff0d3',3);sun.position.set(-60,150,70);this.scene.add(sun);this.scene.add(new Planet(planetRadius),new Terrain(planetRadius),new Clouds(planetRadius),new Airport(planetRadius));this.hud=new FlightHUD(()=>this.pause(),()=>this.resume(),()=>this.stopFlight());this.menu=new MainMenu(()=>this.start(),d=>this.select(d),()=>{const a=aircraft[this.configIndex]!;return{name:a.name,description:a.description,index:this.configIndex,count:aircraft.length}});this.root.append(this.menu.element,this.hud.element);this.camera.position.set(0,planetRadius+36,42);this.camera.lookAt(0,planetRadius,0);this.resize();window.addEventListener('resize',this.resize);window.addEventListener('keydown',this.keydown);this.root.dataset.ready='true';void this.loadSelected();this.loop.start();}
+ private loop=new GameLoop(dt=>this.update(dt));
+ private async loadSelected(){const config=aircraft[this.configIndex]!;try{const instance=await this.loader.load(config);if(!this.renderer.domElement.isConnected||this.configIndex!==aircraft.findIndex(a=>a.id===config.id))return;instance.root.position.set(this.selectionX,planetRadius+2,0);this.instance=instance;this.controller=new FlightController(this.physics,instance);this.scene.add(instance.root);this.root.dataset.model='ready';this.root.dataset.modelName=config.name;this.root.querySelector('.model-error')?.remove();}catch(error){this.root.dataset.model='error';let panel=this.root.querySelector<HTMLElement>('.model-error');if(!panel){panel=document.createElement('div');panel.className='model-error';this.root.append(panel)}panel.textContent=`${config.name} could not be loaded. Check the local aircraft model in public/models/aircraft/.`;console.error(error)}}
+ private select(direction:number){if(this.state.mode!=='selection'||this.busySelection)return;this.busySelection=true;this.configIndex=(this.configIndex+direction+aircraft.length)%aircraft.length;const old=this.instance;this.instance=null;this.controller=null;if(old)this.scene.remove(old.root);this.menu.transition(direction,()=>{this.busySelection=false;void this.loadSelected()});this.selectionX=direction>0?18:-18;this.transition=0;this.root.dataset.model='loading';this.loadSelected()}
+ private start(){if(!this.state.beginStart()||!this.instance)return;this.menu.setBusy(true);this.menu.enterFlight();this.hud.setVisible(true);this.cameraBlend=0;this.takeoffTime=0;this.input.clear();this.instance.root.position.x=this.selectionX;this.root.dataset.state=this.state.mode}
+ private pause(){if(!this.state.pause())return;this.hud.setPaused(true);this.root.dataset.state=this.state.mode}
+ private resume(){if(!this.state.resume())return;this.hud.setPaused(false);this.root.dataset.state=this.state.mode}
+ private stopFlight(){if(!this.state.beginReturn())return;this.hud.setPaused(false);this.menu.setBusy(true);this.returning=0;this.root.dataset.state=this.state.mode}
+ private update(dt:number){const active=this.state.mode==='takeoff'||this.state.mode==='flying';if(active&&this.controller){if(this.state.mode==='takeoff'){this.takeoffTime+=dt;this.physics.step(dt,{pitch:this.takeoffTime>2.4?0.45:0,roll:0,throttle:1});this.controller.sync();this.instance?.update(dt);if(this.takeoffTime>3.5){this.state.beginFlight();this.root.dataset.state='flying'}}else this.controller.update(dt,this.input.read());this.cameraBlend=Math.min(1,this.cameraBlend+dt/2);this.camera.follow(this.physics,dt);}
+ if(this.state.mode==='transitioning'){this.transition=Math.min(1,this.transition+dt/.68);if(this.instance)this.instance.root.position.x+=(0-this.instance.root.position.x)*(1-Math.exp(-5*dt));if(this.transition>=1){this.state.beginTakeoff();this.root.dataset.state='takeoff';this.takeoffTime=0}}
+ if(this.state.mode==='returning'&&this.controller){this.returning=Math.min(1,this.returning+dt/1.1);const t=this.returning*this.returning*(3-2*this.returning);this.physics.position.lerp(new Vector3(0,planetRadius+2,0),Math.min(1,dt*2));this.physics.orientation.slerp(new (this.physics.orientation.constructor as typeof import('three').Quaternion)(),Math.min(1,dt*2));this.controller.sync();this.instance!.root.position.x+=(0-this.instance!.root.position.x)*Math.min(1,dt*3);this.camera.position.lerp(new Vector3(0,planetRadius+36,42),Math.min(1,dt*2));this.camera.lookAt(0,planetRadius,0);if(t>=1){this.physics.reset();this.controller.sync();this.instance!.root.position.set(0,planetRadius+2,0);this.state.finishReturn();this.menu.returnToSelection();this.menu.setBusy(false);this.hud.setVisible(false);this.root.dataset.state='selection'}}
+ if(this.state.mode==='selection'||this.state.mode==='paused'){if(this.state.mode==='selection')this.camera.position.lerp(new Vector3(0,planetRadius+36,42),Math.min(1,dt*2));this.camera.lookAt(0,planetRadius,0)}
+ this.hud.update(this.physics);this.renderer.render(this.scene,this.camera)}
+ dispose(){this.loop.stop();this.input.dispose();this.menu.dispose();window.removeEventListener('resize',this.resize);window.removeEventListener('keydown',this.keydown);this.scene.traverse(o=>{if(o instanceof Mesh){o.geometry.dispose();const m=Array.isArray(o.material)?o.material:[o.material];m.forEach(x=>x.dispose())}});this.renderer.dispose();this.root.replaceChildren()}
 }
