@@ -32,4 +32,25 @@ describe('FlightPhysics', () => {
     for (let i = 0; i < 300; i++) body.step(1 / 60, { ...neutral, throttle: 1 });
     expect(body.speed).toBeCloseTo(scout.cruiseSpeed * 1.5, 1);
   });
+  it('climbs to the selected altitude and then holds near it', () => {
+    const body = new FlightPhysics(scout, 100);
+    body.setAltitudeHold(30);
+    for (let i = 0; i < 2400; i++) body.step(1 / 60, neutral);
+    expect(body.altitude).toBeGreaterThan(27);
+    expect(body.altitude).toBeLessThan(33);
+    const heldAltitude = body.altitude;
+    for (let i = 0; i < 600; i++) body.step(1 / 60, neutral);
+    expect(Math.abs(body.altitude - heldAltitude)).toBeLessThan(2);
+  });
+  it('consumes fuel and loses engine power when fuel is exhausted', () => {
+    const body = new FlightPhysics(scout, 100);
+    const startingFuel = body.fuel;
+    for (let i = 0; i < 600; i++) body.step(1 / 60, neutral);
+    expect(body.fuel).toBeLessThan(startingFuel);
+    body.fuel = 0;
+    const speed = body.speed;
+    for (let i = 0; i < 600; i++) body.step(1 / 60, neutral);
+    expect(body.speed).toBeLessThan(speed);
+    expect(body.altitude).toBeLessThan(30);
+  });
 });
