@@ -7,7 +7,7 @@ export class FlightPhysics {
   speed: number;
   private throttle = 0.65;
   constructor(private config: AircraftConfig, private radius: number) {
-    this.position = new Vector3(0, radius + 12, 0);
+    this.position = new Vector3(0, radius + 2, 0);
     this.speed = config.cruiseSpeed;
   }
   step(dt: number, input: FlightInput) {
