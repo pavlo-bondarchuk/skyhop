@@ -53,4 +53,16 @@ describe('FlightPhysics', () => {
     expect(body.speed).toBeLessThan(speed);
     expect(body.altitude).toBeLessThan(30);
   });
+  it('banks into coordinated turns instead of yawing flat', () => {
+    const left = new FlightPhysics(scout, 100);
+    const right = new FlightPhysics(scout, 100);
+    for (let i = 0; i < 120; i++) {
+      left.step(1 / 60, { ...neutral, roll: -1 });
+      right.step(1 / 60, { ...neutral, roll: 1 });
+    }
+    expect(left.position.x).toBeLessThan(0);
+    expect(right.position.x).toBeGreaterThan(0);
+    expect(new Vector3(0, 1, 0).applyQuaternion(left.orientation).x).toBeGreaterThan(0);
+    expect(new Vector3(0, 1, 0).applyQuaternion(right.orientation).x).toBeLessThan(0);
+  });
 });

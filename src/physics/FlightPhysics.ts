@@ -8,6 +8,7 @@ export class FlightPhysics {
   private throttle = 0.65;
   private altitudeTarget: number | null = null;
   private previousAltitude: number | undefined;
+  private bankAngle = 0;
   fuel = 100;
   flaps = 0;
   constructor(private config: AircraftConfig, private radius: number) {
@@ -31,13 +32,18 @@ export class FlightPhysics {
     const previousUp = this.position.clone().normalize();
     const rotation = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), pitch * this.config.turnRate * dt);
     this.orientation.multiply(rotation);
-    this.orientation.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), input.roll * this.config.turnRate * dt));
+    const targetBank = input.roll * 0.62;
+    const bankDelta = (targetBank - this.bankAngle) * (1 - Math.exp(-3.5 * dt));
+    this.bankAngle += bankDelta;
+    this.orientation.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), bankDelta));
+    const coordinatedTurn = -Math.sin(this.bankAngle) * 9.81 / Math.max(this.speed, 8);
+    this.orientation.multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), coordinatedTurn * dt));
     this.position.addScaledVector(new Vector3(0, 0, -1).applyQuaternion(this.orientation), this.speed * dt);
     const nextUp = this.position.clone().normalize();
     this.orientation.premultiply(new Quaternion().setFromUnitVectors(previousUp, nextUp)).normalize();
     if (this.position.length() < this.radius + 2) this.position.setLength(this.radius + 2);
   }
-  reset() { this.position.set(0, this.radius + 2, 0); this.orientation.identity(); this.speed = this.config.cruiseSpeed; this.throttle = 0.65; this.fuel = 100; this.flaps = 0; this.altitudeTarget = null; this.previousAltitude = undefined; }
+  reset() { this.position.set(0, this.radius + 2, 0); this.orientation.identity(); this.speed = this.config.cruiseSpeed; this.throttle = 0.65; this.fuel = 100; this.flaps = 0; this.altitudeTarget = null; this.previousAltitude = undefined; this.bankAngle = 0; }
   setAltitudeHold(altitude: number | null) { this.altitudeTarget = altitude; this.previousAltitude = this.altitude; }
   setThrottle(value: number) { this.throttle = Math.max(0, Math.min(1, value)); }
   setFlaps(value: number) { this.flaps = Math.max(0, Math.min(1, value)); }
