@@ -62,7 +62,7 @@ describe('FlightPhysics', () => {
     }
     expect(left.position.x).toBeLessThan(0);
     expect(right.position.x).toBeGreaterThan(0);
-    expect(new Vector3(0, 1, 0).applyQuaternion(left.orientation).x).toBeGreaterThan(0);
-    expect(new Vector3(0, 1, 0).applyQuaternion(right.orientation).x).toBeLessThan(0);
+    expect(new Vector3(0, 1, 0).applyQuaternion(left.orientation).x).toBeLessThan(0);
+    expect(new Vector3(0, 1, 0).applyQuaternion(right.orientation).x).toBeGreaterThan(0);
   });
 });

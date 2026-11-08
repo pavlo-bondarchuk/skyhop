@@ -23,8 +23,9 @@ export class FlightHUD {
   };
   constructor(onPause: () => void, onResume: () => void, onStop: () => void, onThrottle: (value: number) => void, onFlaps: (value: number) => void) {
     this.element.className = 'hud';
-    this.element.innerHTML = `<div class="instrument-panel"><div class="gauge"><small>AIRSPEED</small><strong data-speed>0</strong><span>M/S</span><i class="gauge-needle speed-needle"></i></div><div class="gauge"><small>ALTITUDE</small><strong data-altitude>0</strong><span>M</span><i class="gauge-needle altitude-needle"></i></div><div class="fuel-gauge"><small>FUEL</small><strong data-fuel></strong><span>L</span><div class="fuel-track"><i></i></div></div><label class="lever throttle-lever"><small>THROTTLE</small><input aria-label="Throttle" type="range" min="0" max="100" value="65"><span>0 — 100%</span></label><button class="flaps-lever" aria-label="Toggle flaps"><small>FLAPS</small><strong>UP</strong></button></div><button class="pause-button" aria-label="Pause flight"></button><div class="pause-overlay" hidden><div class="pause-card"><small>FLIGHT PAUSED</small><h2>Take a breather.</h2><button class="resume">Resume</button><button class="stop-flight">Stop flight</button></div></div><div class="fuel-warning" role="alert" hidden>FUEL EMPTY · GLIDE TO A SAFE LANDING</div>`;
+    this.element.innerHTML = `<div class="instrument-panel"><div class="gauge"><small>AIRSPEED</small><strong data-speed>0</strong><span>M/S</span><div class="dial-ticks" aria-hidden="true"></div><i class="gauge-needle speed-needle"></i><i class="needle-hub"></i></div><div class="gauge"><small>ALTITUDE</small><strong data-altitude>0</strong><span>M</span><div class="dial-ticks" aria-hidden="true"></div><i class="gauge-needle altitude-needle"></i><i class="needle-hub"></i></div><div class="fuel-gauge"><small>FUEL</small><strong data-fuel></strong><span>L</span><div class="fuel-track"><i></i></div></div><label class="lever throttle-lever"><small>THROTTLE</small><input aria-label="Throttle" type="range" min="0" max="100" value="65"><span>0 — 100%</span></label><button class="flaps-lever" aria-label="Toggle flaps"><small>FLAPS</small><strong>UP</strong></button></div><button class="pause-button" aria-label="Pause flight"></button><div class="pause-overlay" hidden><div class="pause-card"><small>FLIGHT PAUSED</small><h2>Take a breather.</h2><button class="resume">Resume</button><button class="stop-flight">Stop flight</button></div></div><div class="fuel-warning" role="alert" hidden>FUEL EMPTY · GLIDE TO A SAFE LANDING</div>`;
     this.speed = this.element.querySelector('[data-speed]')!;
+    this.element.querySelectorAll<HTMLElement>('.dial-ticks').forEach(ticks => { for (let index = 0; index <= 10; index++) { const tick = document.createElement('i'); tick.style.setProperty('--tick-angle', `${-135 + index * 27}deg`); ticks.append(tick); } });
     this.altitude = this.element.querySelector('[data-altitude]')!;
     this.fuel = this.element.querySelector('[data-fuel]')!;
     this.throttle = this.element.querySelector('[aria-label="Throttle"]')!;
@@ -42,6 +43,8 @@ export class FlightHUD {
   }
   update(body: FlightPhysics) {
     this.speed.textContent = body.speed.toFixed(0);
+    this.element.querySelector<HTMLElement>('.speed-needle')!.style.transform = `rotate(${Math.max(-130, Math.min(130, body.speed / 45 * 130 - 65))}deg)`;
+    this.element.querySelector<HTMLElement>('.altitude-needle')!.style.transform = `rotate(${Math.max(-130, Math.min(130, body.altitude / 60 * 130 - 65))}deg)`;
     this.altitude.textContent = body.altitude.toFixed(0);
     this.fuel.textContent = body.fuel.toFixed(1);
     if (document.activeElement !== this.throttle) this.throttle.value = String(Math.round(body.throttleLevel * 100));
