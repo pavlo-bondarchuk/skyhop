@@ -1,21 +1,15 @@
 import { test, expect } from '@playwright/test';
-test('renders the world, starts flight and pauses', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/');
-  await expect(page.locator('#app')).toHaveAttribute('data-ready', 'true');
-  await expect(page.getByLabel('SKYHOP 3D world')).toBeVisible();
-  await page.getByRole('button', { name: "Let's fly" }).click();
-  await expect(page.locator('.hud')).toBeVisible();
-  await expect(page.locator('[data-speed]')).toHaveText(/\d+/);
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('status')).toContainText('Paused');
-  const altitude = await page.locator('[data-altitude]').textContent();
-  await page.waitForTimeout(200);
-  await expect(page.locator('[data-altitude]')).toHaveText(altitude!);
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('status')).toBeEmpty();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByLabel('SKYHOP 3D world')).toBeVisible();
-  expect(errors).toEqual([]);
+test('aircraft selection, flight, pause, stop and restart', async ({ page }) => {
+ test.setTimeout(60_000);
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+ await page.goto('/');await page.setViewportSize({width:1440,height:900});await expect(page.locator('#app')).toHaveAttribute('data-ready','true');await expect(page.getByLabel('SKYHOP 3D world')).toBeVisible();
+ await expect(page.locator('.aircraft-name')).toHaveText('The Explorer');await expect(page.locator('#app')).toHaveAttribute('data-model','ready');await page.screenshot({path:'test-results/screenshots/selection-1440x900.png'});await page.keyboard.press('ArrowRight');await expect(page.locator('.aircraft-name')).toHaveText('The Voyager',{timeout:5000});
+ await page.keyboard.press('ArrowRight');await expect(page.locator('.aircraft-name')).toHaveText('The Explorer',{timeout:5000});await page.setViewportSize({width:1920,height:1080});await page.screenshot({path:'test-results/screenshots/selection-1920x1080.png'});await page.setViewportSize({width:1440,height:900});
+ const selector=await page.locator('.aircraft-selector').boundingBox();if(!selector)throw new Error('AircraftSelector is not visible');const y=selector.y+selector.height/2;await page.mouse.move(selector.x+selector.width*.75,y);await page.mouse.down();await page.mouse.move(selector.x+selector.width*.25,y,{steps:5});await page.mouse.up();await expect(page.locator('.aircraft-name')).toHaveText('The Voyager',{timeout:5000});
+ await page.keyboard.press('ArrowLeft');await expect(page.locator('.aircraft-name')).toHaveText('The Explorer',{timeout:5000});for(let i=0;i<6;i++){await page.keyboard.press('ArrowRight');await expect(page.locator('#app')).toHaveAttribute('data-model','ready');await page.waitForTimeout(450);await expect(page.locator('#app')).toHaveAttribute('data-aircraft-count','1');}
+ await page.setViewportSize({width:1536,height:864});await page.keyboard.press('Enter');await expect(page.locator('#app')).toHaveAttribute('data-state','transitioning');await expect(page.locator('.hud')).toHaveClass(/visible/);await expect(page.locator('#app')).toHaveAttribute('data-state','takeoff',{timeout:8000});await expect(page.locator('#app')).toHaveAttribute('data-state','flying',{timeout:15000});await page.screenshot({path:'test-results/screenshots/hud-1536x864.png'});await expect(page.locator('[data-speed]')).not.toHaveText('0');await expect(page.locator('[data-fuel]')).not.toHaveText('0.0');await page.getByLabel('Throttle').fill('34');await expect(page.getByLabel('Throttle')).toHaveValue('34');await page.getByLabel('Toggle flaps').click();await expect(page.locator('.flaps-lever strong')).toHaveText('DOWN');
+ const initial=await page.locator('[data-speed]').textContent();await page.keyboard.press('Escape');await expect(page.locator('.pause-overlay')).toBeVisible();await expect(page.getByRole('button',{name:'Resume'})).toHaveClass(/selected/);await page.keyboard.press('ArrowDown');await expect(page.getByRole('button',{name:'Stop flight'})).toHaveClass(/selected/);await page.keyboard.press('ArrowUp');await page.waitForTimeout(250);await expect(page.locator('[data-speed]')).toHaveText(initial!);await page.keyboard.press('Enter');await expect(page.locator('.pause-overlay')).toBeHidden();await expect(page.locator('#app')).toHaveAttribute('data-state','flying');
+ await page.keyboard.press('Escape');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await expect(page.locator('#app')).toHaveAttribute('data-state','selection',{timeout:12000});await page.screenshot({path:'test-results/screenshots/return-1440x900.png'});await expect(page.locator('.aircraft-name')).toHaveText('The Explorer');await expect(page.locator('.hud')).not.toHaveClass(/visible/);
+ await page.keyboard.press('Enter');await expect(page.locator('#app')).toHaveAttribute('data-state','transitioning');await expect(page.locator('#app')).toHaveAttribute('data-state','takeoff',{timeout:8000});
+ await page.keyboard.press('Escape');await page.getByRole('button',{name:'Stop flight'}).click();await expect(page.locator('#app')).toHaveAttribute('data-state','selection',{timeout:12000});await page.setViewportSize({width:390,height:844});await page.screenshot({path:'test-results/screenshots/selection-390x844.png'});await expect(page.getByLabel('SKYHOP 3D world')).toBeVisible();expect(errors).toEqual([]);
 });

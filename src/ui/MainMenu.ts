@@ -1,12 +1,22 @@
-import { ArrowUpRight, Plane, createElement } from 'lucide';
+import { AircraftSelector, type AircraftSelection } from './AircraftSelector';
+
 export class MainMenu {
   readonly element = document.createElement('section');
-  constructor(onStart: () => void) {
+  readonly title: HTMLElement;
+  readonly description: HTMLElement;
+  readonly selector: AircraftSelector;
+
+  constructor(onStart: () => void, onSelect: (direction: number) => void, selection: () => AircraftSelection) {
     this.element.className = 'menu';
-    this.element.innerHTML = `<div class="eyebrow">A SMALL PLANE. A WHOLE WORLD.</div><h1>Take the<br>scenic route<span>.</span></h1><p>Leave the everyday behind.<br>Find your own way around a little blue world.</p><button class="launch">Let's fly</button><div class="aircraft-card"><span class="plane-icon"></span><div><small>YOUR AIRCRAFT</small><strong>Sparrow / 01</strong></div><span class="tag">READY</span></div>`;
-    this.element.querySelector('button')!.append(createElement(ArrowUpRight, { width: 19 }));
-    this.element.querySelector('.plane-icon')!.append(createElement(Plane, { width: 24 }));
-    this.element.querySelector('button')!.addEventListener('click', onStart);
+    this.element.innerHTML = `<div class="intro"><div class="eyebrow">A SMALL PLANE. A WHOLE WORLD.</div><h1>Take the<br>scenic route<span>.</span></h1><p>Leave the everyday behind.<br>Find your own way around a little blue world.</p></div>`;
+    this.title = this.element.querySelector('h1')!;
+    this.description = this.element.querySelector('.intro > p')!;
+    this.selector = new AircraftSelector(selection, onSelect, onStart);
+    this.element.append(this.selector.element);
   }
-  hide() { this.element.hidden = true; }
+  transition(direction: number, done: () => void) { this.selector.transition(direction, done); }
+  enterFlight() { this.element.classList.add('leaving'); this.selector.enterFlight(); }
+  returnToSelection() { this.element.classList.remove('leaving'); this.selector.returnToSelection(); }
+  setBusy(busy: boolean) { this.selector.setBusy(busy); }
+  dispose() { this.selector.dispose(); }
 }
