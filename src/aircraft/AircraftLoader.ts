@@ -16,7 +16,9 @@ export class AircraftLoader {
     const asset = await model;
     const root = new Group(); root.name = `${config.id}-physical-root`;
     const pivot = new Group(); pivot.name = `${config.id}-visual-pivot`; pivot.rotation.y = config.correctionDegrees * Math.PI / 180;
-    const visual = asset.scene.clone(true); pivot.add(visual); root.add(pivot);
+    const visual = asset.scene.clone(true);
+    visual.scale.setScalar(2.1);
+    pivot.add(visual); root.add(pivot);
     const mixer = new AnimationMixer(visual);
     for (const clip of asset.animations) mixer.clipAction(clip).play();
     const propellers: Object3D[] = [];
